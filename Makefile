@@ -79,7 +79,8 @@ $(DEVCON):
 		--mode=go=rX \
 		-C devcon.git/setup devcon
 
-get-sources: $(PVDRIVERS) $(BINARIES) $(DEVCON)
+#get-sources: $(PVDRIVERS) $(BINARIES) $(DEVCON)
+get-sources: $(BINARIES) $(DEVCON)
 get-sources:
 	git submodule update --init
 

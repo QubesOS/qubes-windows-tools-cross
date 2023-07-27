@@ -1,4 +1,6 @@
 %define		xenpv_version 8.2.2
+# do not include any content, only a README file - see QSB-091
+%global dummy_package 1
 
 Name:		qubes-windows-tools
 Version:	@VERSION@
@@ -38,13 +40,16 @@ Source18:	qubes-tools-combined.wxs
 Source19:	diskpart.ps1
 Source20:	qnetwork_setup.bat
 Source100:	Makefile
+Source101:  warning-README.txt
 
+%if !0%{?dummy_package}
 # latest stable xen binary drivers
 Source21:	xenbus-%{xenpv_version}.tar
 Source22:	xeniface-%{xenpv_version}.tar
 Source23:	xenvif-%{xenpv_version}.tar
 Source24:	xennet-%{xenpv_version}.tar
 Source25:	xenvbd-%{xenpv_version}.tar
+%endif
 
 Source26:	wix311-binaries.zip
 Source27:	dotNetFx40_Full_x86_x64.exe
@@ -53,6 +58,7 @@ Patch0:         devcon-headers.patch
 
 %prep
 %setup -c -T
+%if !0%{?dummy_package}
 cp -f %{S:100} ./
 unzip -d wix %{S:26}
 cat %{_sourcedir}/devcon.tar.gz | tar -xzvf - -i
@@ -72,12 +78,14 @@ cp -f %{S:10} include
 mkdir -p $HOME/.cache/winetricks/dotnet40
 cp %{S:27} $HOME/.cache/winetricks/dotnet40
 WINEPREFIX=`pwd`/wine WINEARCH=win32 winetricks -q --force dotnet40
+%endif
 
 %description
 PV Drivers and Qubes Tools for Windows AppVMs.
 
 %build
 
+%if !0%{?dummy_package}
 make all
 
 export WINEMU=wine; export WINEPREFIX=`pwd`/wine; export WINEARCH=win32;
@@ -89,17 +97,32 @@ cp -f %{S:19} %{S:20} %{S:16} bin/${DDK_ARCH}
 ${WINEMU} ${WIXPATH}/candle.exe -arch ${DDK_ARCH} -ext WixDifxAppExtension -ext WixIIsExtension *.wxs;
 ${WINEMU} ${WIXPATH}/light.exe -sval *.wixobj -ext WixDifxAppExtension -ext WixUIExtension -ext WixIIsExtension -ext WixUtilExtension "Z:${WIXPATH}/difxapp_${DDK_ARCH}.wixlib" -o qubes-tools-${DDK_ARCH}.msi
 wineserver --kill || :
+
 mkdir -p iso-content
 cp qubes-tools-${DDK_ARCH}.msi iso-content/
 genisoimage -o qubes-windows-tools-%{version}.%{release}.iso -m .gitignore -JR iso-content
+%else
+mkdir -p iso-content
+cp %{S:101} iso-content/README.txt
+genisoimage -o qubes-windows-tools-placeholder.iso -m .gitignore -JR iso-content
+%endif
 
 %install
 mkdir -p $RPM_BUILD_ROOT/usr/lib/qubes/
+%if !0%{?dummy_package}
 cp qubes-windows-tools-%{version}.%{release}.iso $RPM_BUILD_ROOT/usr/lib/qubes/
 ln -s qubes-windows-tools-%{version}.%{release}.iso $RPM_BUILD_ROOT/usr/lib/qubes/qubes-windows-tools.iso
+%else
+cp qubes-windows-tools-placeholder.iso $RPM_BUILD_ROOT/usr/lib/qubes/
+ln -s qubes-windows-tools-placeholder.iso $RPM_BUILD_ROOT/usr/lib/qubes/qubes-windows-tools.iso
+%endif
 
 %files
+%if !0%{?dummy_package}
 /usr/lib/qubes/qubes-windows-tools-%{version}.%{release}.iso
+%else
+/usr/lib/qubes/qubes-windows-tools-placeholder.iso
+%endif
 /usr/lib/qubes/qubes-windows-tools.iso
 
 %changelog
